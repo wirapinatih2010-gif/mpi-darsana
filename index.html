@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darsana - Media Pembelajaran Interaktif Agama Hindu</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cream: {
+                            50: '#fdfbf7',
+                            100: '#f7f3e9',
+                            200: '#eee5d3',
+                            300: '#e2d2b4',
+                            800: '#4a3b2c',
+                            900: '#2c2219',
+                        },
+                        gold: {
+                            300: '#f3d375',
+                            400: '#e5be4e',
+                            500: '#d4af37',
+                            600: '#b89228',
+                            700: '#94721d',
+                        },
+                        brown: {
+                            600: '#8c5a3c',
+                            700: '#70452c',
+                            800: '#5c3d2e',
+                            900: '#3d251a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        serif: ['Cinzel', 'Georgia', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        .bg-pattern {
+            background-image: radial-gradient(#d4af37 0.75px, transparent 0.75px), radial-gradient(#d4af37 0.75px, #fdfbf7 0.75px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            background-opacity: 0.15;
+        }
+        .dark .bg-pattern {
+            background-image: radial-gradient(#d4af37 0.75px, transparent 0.75px), radial-gradient(#d4af37 0.75px, #1a1612 0.75px);
+        }
+        .ornament-border {
+            border-image: linear-gradient(to right, transparent, #d4af37, transparent) 1;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .dark .glass-card {
+            background: rgba(30, 25, 20, 0.85);
+        }
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        .animate-float {
+            animation: floatSlow 5s ease-in-out infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .animate-glow {
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1e9d2;
+        }
+        .dark ::webkit-scrollbar-track {
+            background: #2a221b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d4af37;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-cream-50 text-cream-900 dark:bg-zinc-950 dark:text-cream-100 min-h-screen transition-colors duration-300">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- WEB AUDIO SYNTHESIS FOR SFX & AMBIENT MUSIC ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.isMuted = false;
+                this.bgOsc = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playTone(freq, duration = 0.15, type = 'sine') {
+                if (this.isMuted) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+
+            playCorrect() {
+                this.playTone(523.25, 0.1, 'triangle'); // C5
+                setTimeout(() => this.playTone(659.25, 0.1, 'triangle'), 100); // E5
+                setTimeout(() => this.playTone(783.99, 0.2, 'triangle'), 200); // G5
+            }
+
+            playWrong() {
+                this.playTone(220, 0.15, 'sawtooth');
+                setTimeout(() => this.playTone(196, 0.25, 'sawtooth'), 150);
+            }
+
+            playClick() {
+                this.playTone(800, 0.04, 'sine');
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // --- DATA CONTENT ---
+        const MATERI_LIST = [
+            {
+                id: 'panca-sradha',
+                title: 'Panca Sradha',
+                subtitle: 'Lima Keyakinan Dasar Agama Hindu',
+                icon: 'sun',
+                badge: 'Keyakinan Utama',
+                definition: 'Panca Sradha adalah lima dasar keyakinan atau keimanan yang mutlak yang wajib diyakini oleh setiap umat Hindu dalam mengarungi kehidupan di dunia ini.',
+                explanation: 'Kata "Panca" berarti lima dan "Sradha" berarti kepercayaan atau keyakinan. Kelima sradha ini merupakan satu kesatuan utuh yang melandasi seluruh prilaku, ritual, dan filosofi hidup seorang pemeluk Hindu.',
+                points: [
+                    { title: '1. Brahman Sradha', desc: 'Keyakinan terhadap keberadaan Brahman (Tuhan Yang Maha Esa) sebagai sumber dari segala sumber kehidupan (Ekam Sat Vipra Bahudha Vadanti).' },
+                    { title: '2. Atman Sradha', desc: 'Keyakinan akan adanya Atman, yaitu Percikan Suci dari Sang Hyang Widhi yang menghidupkan setiap makhluk hidup.' },
+                    { title: '3. Karma Phala Sradha', desc: 'Keyakinan akan hukum sebab-akibat. Setiap perbuatan (karma) pasti menghasilkan buah (phala).' },
+                    { title: '4. Punarbhava Sradha', desc: 'Keyakinan akan kelahiran kembali (reinkarnasi/samsara) untuk menyempurnakan kualitas jiwa.' },
+                    { title: '5. Moksha Sradha', desc: 'Keyakinan akan kebebasan tertinggi, menyatunya Atman kembali dengan Brahman (Moksartham Jagadhita ya ca iti dharma).' }
+                ],
+                example: 'Ketika hendak bertindak, seorang siswa selalu jujur saat ujian karena percaya pada hukum Karma Phala (pasti ada buah positif dari kejujuran).',
+                illustration: '🧘‍♂️ ☀️ ⚖️ 🔄 ☸️'
+            },
+            {
+                id: 'tri-hita-karana',
+                title: 'Tri Hita Karana',
+                subtitle: 'Tiga Keharmonisan Penyebab Kebahagiaan',
+                icon: 'heart',
+                badge: 'Keharmonisan',
+                definition: 'Tri Hita Karana secara harfiah berasal dari kata "Tri" (tiga), "Hita" (kebahagiaan/sejahtera), dan "Karana" (penyebab). Filosofi ini mengajarkan tiga aspek hubungan harmonis.',
+                explanation: 'Kebahagiaan sejati tidak dapat dicapai jika hanya memperhatikan diri sendiri. Manusia harus menyeimbangkan hubungan spiritual, sosial, dan lingkungan alam secara bertahap.',
+                points: [
+                    { title: '1. Parahyangan', desc: 'Hubungan yang harmonis dan selaras antara manusia dengan Tuhan Yang Maha Esa (Sang Hyang Widhi Wasa).' },
+                    { title: '2. Pawongan', desc: 'Hubungan yang harmonis, toleran, dan penuh kasih sayang antar sesama manusia.' },
+                    { title: '3. Palemahan', desc: 'Hubungan yang harmonis dan peduli antara manusia dengan lingkungan alam sekitarnya.' }
+                ],
+                example: 'Di sekolah: Rajin bersembahyang di Padmasana (Parahyangan), menghormati guru dan berteman tanpa membeda-bedakan (Pawongan), serta menjaga kebersihan taman sekolah (Palemahan).',
+                illustration: '🛕 🤝 🌿'
+            },
+            {
+                id: 'tri-kaya-parisudha',
+                title: 'Tri Kaya Parisudha',
+                subtitle: 'Tiga Perilaku Yang Harus Disucikan',
+                icon: 'shield-check',
+                badge: 'Etika & Morality',
+                definition: 'Tri Kaya Parisudha adalah landasan etika Hindu yang berarti tiga jenis perbuatan yang wajib disucikan dan dijaga kebersihannya.',
+                explanation: 'Pikiran adalah akar dari segalanya. Dari pikiran lahir perkataan, dan dari perkataan diwujudkan dalam tindakan nyata.',
+                points: [
+                    { title: '1. Manacika Parisudha', desc: 'Berpikir yang baik, benar, dan suci. Tidak iri hati, berpikiran positif, dan penuh kasih.' },
+                    { title: '2. Vacika Parisudha', desc: 'Berkatakata yang ramah, sopan, jujur, tidak memfitnah, dan bermanfaat bagi orang lain.' },
+                    { title: '3. Kayika Parisudha', desc: 'Berbuat/bertindak yang baik dan benar, seperti menolong sesama dan tidak menyakiti makhluk lain (Ahimsa).' }
+                ],
+                example: 'Melihat teman kesulitan, kita berpikir positif untuk menolongnya (Manacika), menyapanya dengan santun (Vacika), dan membantunya membawakan barang (Kayika).',
+                illustration: '🧠 🗣️ 🤲'
+            },
+            {
+                id: 'catur-purusa-artha',
+                title: 'Catur Purusa Artha',
+                subtitle: 'Empat Tujuan Utama Kehidupan Manusia',
+                icon: 'target',
+                badge: 'Tujuan Hidup',
+                definition: 'Catur Purusa Artha merupakan empat skala prioritas atau tujuan hidup manusia Hindu untuk mencapai kehidupan yang seimbang dunia dan akhirat.',
+                explanation: 'Tanpa landasan kebenaran (Dharma), pencarian materi (Artha) dan pemenuhan keinginan (Kama) akan menyesatkan manusia dari kebebasan sejati (Moksha).',
+                points: [
+                    { title: '1. Dharma', desc: 'Kebenaran, hukum abadi, kewajiban, dan keadilan yang menjadi fondasi utama.' },
+                    { title: '2. Artha', desc: 'Materi, kekayaan, dan sarana duniawi yang diperoleh dengan jalan Dharma.' },
+                    { title: '3. Kama', desc: 'Keinginan, kesenangan, dan kenikmatan yang terarah dan sesuai etika Dharma.' },
+                    { title: '4. Moksha', desc: 'Kebahagiaan tertinggi dan kebebasan jiwa yang abadi.' }
+                ],
+                example: 'Siswa belajar tekun sebagai pelaksanaan tugas kewajiban (Dharma), agar mendapat ilmu/prestasi (Artha), untuk menggapai cita-cita yang diimpikan (Kama) menuju kedamaian batin (Moksha).',
+                illustration: '📜 💰 🎯 🕊️'
+            },
+            {
+                id: 'darsana-filsafat',
+                title: 'Darsana dalam Filsafat Hindu',
+                subtitle: 'Pandangan & Penglihatan Spiritual Sejati',
+                icon: 'eye',
+                badge: 'Filsafat (Jñana)',
+                definition: 'Kata "Darsana" berasal dari akar kata Sanskrit "Drs" yang berarti melihat, memandang, atau mengamati. Darsana adalah pandangan filsafat untuk melihat kebenaran hakiki.',
+                explanation: 'Dalam tradisi filsafat Hindu, terdapat Sad Darsana (6 Sistem Filsafat Astika) yang mengakui otoritas Kitab Suci Veda sebagai kebenaran utama.',
+                points: [
+                    { title: 'Nyaya & Vaisesika', desc: 'Menekankan pada logika rasional, metode pengetahuan benar (Pramana), dan analisis atomis alam semesta.' },
+                    { title: 'Samkhya & Yoga', desc: 'Membedakan antara Realitas Material (Prakrti) dan Jiwa Murni (Purusa), serta metode disiplin meditasi.' },
+                    { title: 'Mimamsa & Vedanta', desc: 'Penafsiran ritualistik Veda serta puncak pemikiran metafisika tentang Brahman dan Atman.' }
+                ],
+                example: 'Memelajari Darsana mendidik siswa SMA agar kritis, rasional, berwawasan luas, namun tetap memiliki spiritualitas yang kokoh.',
+                illustration: '👁️ 📚 🌌'
+            },
+            {
+                id: 'tempat-suci-budaya',
+                title: 'Tempat Suci & Budaya Hindu Bali',
+                subtitle: 'Harmoni Arsitektur dan Nilai Tradisi',
+                icon: 'compass',
+                badge: 'Kearifan Lokal',
+                definition: 'Tempat suci (Pura) dan tradisi Hindu Bali dirancang berdasarkan konsep kosmologi sakral Tri Mandala dan Tri Loka.',
+                explanation: 'Kebudayaan Bali seperti Canang Sari, Ngayah, dan Odalan bukan sekadar seremonial, tetapi media persembahan spiritual yang kaya makna edukatif.',
+                points: [
+                    { title: 'Tri Mandala', desc: 'Pembagian zona Pura: Utama Mandala (Suci/Jeroan), Madya Mandala (Tengah), dan Nista Mandala (Luar).' },
+                    { title: 'Canang Sari', desc: 'Simbol rasa syukur dan pengorbanan suci (Yadnya) yang memuat aneka warna bunga sebagai simbol Dewata Nawa Sanga.' },
+                    { title: 'Pura Kahyangan Tiga', desc: 'Pura Desa (Brahma), Pura Puseh (Visnu), dan Pura Dalem (Siva) di setiap Desa Adat.' }
+                ],
+                example: 'Membuat Canang dengan hati bersih melatih kerapian, kesabaran, keikhlasan, dan estetika seni Hindu.',
+                illustration: '🌺 🌺 🌺'
+            }
+        ];
+
+        const QUIZ_QUESTIONS = [
+            {
+                id: 1,
+                question: 'Keyakinan akan keberadaan percikan kecil dari Brahman yang menghidupkan setiap makhluk disebut...',
+                options: ['Karma Phala Sradha', 'Atman Sradha', 'Moksha Sradha', 'Punarbhava Sradha'],
+                correct: 1,
+                explanation: 'Atman Sradha adalah keyakinan bahwa setiap makhluk dihidupkan oleh Atman yang berasal dari Brahman.'
+            },
+            {
+                id: 2,
+                question: 'Penerapan konsep Tri Hita Karana dalam hubungan harmonis antara manusia dengan lingkungan sekitarnya dinamakan...',
+                options: ['Parahyangan', 'Pawongan', 'Palemahan', 'Tri Mandala'],
+                correct: 2,
+                explanation: 'Palemahan merujuk pada lingkungan alam tempat manusia tinggal.'
+            },
+            {
+                id: 3,
+                question: 'Menjaga kata-kata agar jujur, sopan, dan tidak menyakiti perasaan orang lain merupakan pelaksanaan dari...',
+                options: ['Manacika Parisudha', 'Vacika Parisudha', 'Kayika Parisudha', 'Ahimsa Karma'],
+                correct: 1,
+                explanation: 'Vacika Parisudha berkaitan dengan kebersihan dan kesucian dalam berucap (berkata).'
+            },
+            {
+                id: 4,
+                question: 'Dalam ajaran Catur Purusa Artha, harta atau materi yang diperoleh harus senantiasa berlandaskan pada...',
+                options: ['Kama', 'Dharma', 'Moksha', 'Artha'],
+                correct: 1,
+                explanation: 'Dharma harus menjadi landasan utama dalam mencari Artha (kekayaan) dan Kama (keinginan).'
+            },
+            {
+                id: 5,
+                question: 'Secara etimologi, kata "Darsana" berasal dari akar kata "Drs" yang mengandung arti...',
+                options: ['Mendengar', 'Melihat / Memandang', 'Melakukan', 'Meninggalkan'],
+                correct: 1,
+                explanation: 'Drs berarti melihat, memandang, atau mengamati pandangan filosofis kebenaran.'
+            },
+            {
+                id: 6,
+                question: 'Pembagian kawasan Pura menjadi bagian Utama Mandala, Madya Mandala, dan Nista Mandala berlandaskan konsep...',
+                options: ['Tri Loka', 'Tri Hita Karana', 'Tri Mandala', 'Tri Kaya Parisudha'],
+                correct: 2,
+                explanation: 'Tri Mandala adalah pembagian struktur tata ruang Pura/tempat suci.'
+            },
+            {
+                id: 7,
+                question: 'Apabila seseorang mendapatkan hasil yang setimpal dengan perbuatan yang dilakukannya di masa lalu, hal ini membuktikan hukum...',
+                options: ['Punarbhava', 'Karma Phala', 'Rta', 'Yadnya'],
+                correct: 1,
+                explanation: 'Hukum Karma Phala menyatakan bahwa setiap sebab perbuatan akan membuahkan hasil.'
+            },
+            {
+                id: 8,
+                question: 'Sikap tidak menyakiti atau tidak membunuh makhluk hidup lain disebut...',
+                options: ['Satya', 'Ahimsa', 'Aseteya', 'Brahmacari'],
+                correct: 1,
+                explanation: 'Ahimsa adalah ajaran kasih sayang untuk tidak menyakiti makhluk hidup.'
+            },
+            {
+                id: 9,
+                question: 'Kebebasan tertinggi di mana jiwa/Atman bersatu kembali dengan Brahman tanpa terikat hukum reinkarnasi disebut...',
+                options: ['Moksha', 'Dharma', 'Samsara', 'Swarga'],
+                correct: 0,
+                explanation: 'Moksha adalah tujuan tertinggi agama Hindu (Moksartham Jagadhita ya ca iti dharma).'
+            },
+            {
+                id: 10,
+                question: 'Pura Kahyangan Tiga yang berfungsi sebagai tempat pemujaan Sang Hyang Widhi dalam manifestasi Dewa Brahma adalah...',
+                options: ['Pura Puseh', 'Pura Dalem', 'Pura Desa', 'Pura Prajapati'],
+                correct: 2,
+                explanation: 'Pura Desa (atau Pura Bale Agung) adalah tempat pemujaan Dewa Brahma.'
+            }
+        ];
+
+        const MATCH_ITEMS = [
+            { id: 'm1', term: 'Parahyangan', def: 'Hubungan harmonis manusia dengan Tuhan' },
+            { id: 'm2', term: 'Manacika', def: 'Pikiran yang baik dan suci' },
+            { id: 'm3', term: 'Karma Phala', def: 'Hukum sebab akibat dari perbuatan' },
+            { id: 'm4', term: 'Utama Mandala', def: 'Area paling suci di dalam Pura' },
+        ];
+
+        const TRUE_FALSE_ITEMS = [
+            { id: 'tf1', text: 'Moksha berarti kebebasan jiwa dari lingkaran kelahiran kembali.', answer: true },
+            { id: 'tf2', text: 'Kayika Parisudha adalah ajaran untuk selalu berpikiran bersih.', answer: false },
+            { id: 'tf3', text: 'Sad Darsana adalah 6 sistem filsafat ortodoks (Astika) dalam Hindu.', answer: true },
+            { id: 'tf4', text: 'Artha boleh dicapai dengan menghalalkan segala cara.', answer: false },
+        ];
+
+        const VIDEO_LIST = [
+            { id: 'v1', title: 'Pengenalan Agama Hindu & Veda', category: 'Pengenalan', duration: '08:45', desc: 'Penjelasan umum mengenai nilai dasar keagamaan dan sejarah Veda.' },
+            { id: 'v2', title: 'Filosofi Tri Hita Karana', category: 'Filosofi', duration: '12:10', desc: 'Menyelami keharmonisan hidup dalam kearifan lokal Nusantara.' },
+            { id: 'v3', title: 'Makna & Simbolisme Canang Sari', category: 'Budaya Bali', duration: '06:30', desc: 'Memahami arti estetis dan spiritual persembahan harian.' },
+            { id: 'v4', title: 'Implementasi Dharma Pelajar SMA', category: 'Implementasi', duration: '10:15', desc: 'Cara nyata menjadi pemuda berintegritas dan berbudi pekerti.' },
+        ];
+
+        // --- MAIN APP COMPONENT ---
+        function App() {
+            const [currentTab, setCurrentTab] = useState('splash');
+            const [isDark, setIsDark] = useState(false);
+            const [isAudioOn, setIsAudioOn] = useState(false);
+            const [xp, setXp] = useState(120);
+            const [completedLessons, setCompletedLessons] = useState(['panca-sradha']);
+            const [selectedLesson, setSelectedLesson] = useState(MATERI_LIST[0]);
+            
+            // Quiz States
+            const [quizAnswers, setQuizAnswers] = useState({});
+            const [quizSubmitted, setQuizSubmitted] = useState(false);
+            const [quizScore, setQuizScore] = useState(0);
+
+            // Games States
+            const [matchedPairs, setMatchedPairs] = useState({});
+            const [selectedTerm, setSelectedTerm] = useState(null);
+            const [tfIndex, setTfIndex] = useState(0);
+            const [tfScore, setTfScore] = useState(0);
+            const [tfFinished, setTfFinished] = useState(false);
+
+            // Mission Tracker
+            const [missions, setMissions] = useState([
+                { id: 1, text: 'Melakukan doa Gayatri / Puja Trisandya sebelum mulai belajar hari ini.', done: true },
+                { id: 2, text: 'Menemukan & mencatat 3 bentuk penerapan Tri Hita Karana di lingkungan sekolahmu.', done: false },
+                { id: 3, text: 'Mengucapkan kata-kata santun dan positif kepada minimal 3 teman sekolah (Vacika Parisudha).', done: false },
+                { id: 4, text: 'Merapikan meja belajar atau membuang sampah pada tempatnya (Palemahan).', done: false }
+            ]);
+
+            useEffect(() => {
+                lucide.createIcons();
+            });
+
+            // Toggle Dark Mode
+            const toggleDarkMode = () => {
+                setIsDark(!isDark);
+                if (!isDark) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            };
+
+            // Audio Toggle
+            const toggleAudio = () => {
+                sound.isMuted = isAudioOn;
+                setIsAudioOn(!isAudioOn);
+                if (!isAudioOn) sound.playClick();
+            };
+
+            const addXP = (amount) => {
+                setXp(prev => prev + amount);
+            };
+
+            const markLessonComplete = (id) => {
+                if (!completedLessons.includes(id)) {
+                    setCompletedLessons([...completedLessons, id]);
+                    addXP(50);
+                    sound.playCorrect();
+                    confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+                }
+            };
+
+            // Calculate quiz result
+            const handleQuizSubmit = () => {
+                let score = 0;
+                QUIZ_QUESTIONS.forEach((q) => {
+                    if (quizAnswers[q.id] === q.correct) {
+                        score += 10;
+                    }
+                });
+                setQuizScore(score);
+                setQuizSubmitted(true);
+                addXP(score);
+                
+                if (score >= 75) {
+                    sound.playCorrect();
+                    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                } else {
+                    sound.playWrong();
+                }
+            };
+
+            const getQuizCategory = (s) => {
+                if (s >= 90) return { label: 'Sangat Baik 🌟', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50' };
+                if (s >= 75) return { label: 'Baik 👍', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/50' };
+                if (s >= 60) return { label: 'Cukup 🙏', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/50' };
+                return { label: 'Perlu Belajar Lagi 📖', color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/50' };
+            };
+
+            // Match Game Handle
+            const handleTermClick = (term) => {
+                sound.playClick();
+                setSelectedTerm(term);
+            };
+
+            const handleDefClick = (defObj) => {
+                if (!selectedTerm) return;
+                if (selectedTerm.id === defObj.id) {
+                    setMatchedPairs({ ...matchedPairs, [selectedTerm.id]: true });
+                    setSelectedTerm(null);
+                    sound.playCorrect();
+                    addXP(20);
+                } else {
+                    sound.playWrong();
+                }
+            };
+
+            // True False Game
+            const handleTFAnswer = (userAns) => {
+                const current = TRUE_FALSE_ITEMS[tfIndex];
+                if (userAns === current.answer) {
+                    sound.playCorrect();
+                    setTfScore(tfScore + 1);
+                    addXP(15);
+                } else {
+                    sound.playWrong();
+                }
+                if (tfIndex + 1 < TRUE_FALSE_ITEMS.length) {
+                    setTfIndex(tfIndex + 1);
+                } else {
+                    setTfFinished(true);
+                }
+            };
+
+            const progressPercentage = Math.round((completedLessons.length / MATERI_LIST.length) * 100);
+
+            // --- SPLASH SCREEN ---
+            if (currentTab === 'splash') {
+                return (
+                    <div className="min-h-screen bg-pattern flex flex-col justify-between items-center px-4 py-8 text-center relative overflow-hidden">
+                        {/* Background Decorative Balinese Sun/Lotus */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gold-400/10 rounded-full blur-3xl -z-10 animate-glow pointer-events-none"></div>
+                        
+                        <div className="w-full flex justify-between items-center max-w-4xl pt-2">
+                            <span className="text-xs tracking-widest uppercase font-semibold text-gold-600 dark:text-gold-400 border border-gold-400/30 px-3 py-1 rounded-full bg-cream-100/80 dark:bg-zinc-900/80">
+                                SMA Kelas XI • Agama Hindu
+                            </span>
+                            <button onClick={toggleDarkMode} className="p-2 text-zinc-600 dark:text-zinc-300 hover:text-gold-600">
+                                <i data-lucide={isDark ? "sun" : "moon"}></i>
+                            </button>
+                        </div>
+
+                        {/* Main Splash Content */}
+                        <div className="my-auto py-8 max-w-2xl flex flex-col items-center">
+                            {/* Lotus Icon Badge */}
+                            <div className="w-24 h-24 mb-6 rounded-full bg-gradient-to-tr from-gold-500 to-amber-300 p-1 shadow-xl shadow-gold-500/20 animate-float flex items-center justify-center">
+                                <div className="w-full h-full bg-cream-50 dark:bg-zinc-900 rounded-full flex items-center justify-center text-gold-600 text-4xl">
+                                    🪷
+                                </div>
+                            </div>
+
+                            <h1 className="font-cinzel text-4xl md:text-6xl font-bold tracking-tight text-brown-800 dark:text-gold-300 mb-3">
+                                DARSANA
+                            </h1>
+                            <p className="text-lg md:text-xl font-medium text-brown-700/80 dark:text-cream-200 mb-2">
+                                Media Pembelajaran Interaktif Agama Hindu
+                            </p>
+                            <p className="text-sm md:text-base text-zinc-600 dark:text-zinc-400 mb-8 max-w-lg">
+                                "Belajar Dharma dengan Cara Kreatif, Modern, dan Mencerahkan Jiwa"
+                            </p>
+
+                            <button
+                                onClick={() => { sound.playClick(); setCurrentTab('beranda'); }}
+                                className="group relative px-8 py-4 bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-600 hover:to-amber-700 text-white font-bold text-lg rounded-2xl shadow-xl shadow-gold-500/30 hover:shadow-gold-500/50 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 flex items-center gap-3"
+                            >
+                                <span>Mulai Belajar Dharma</span>
+                                <i data-lucide="arrow-right" className="w-5 h-5 transition-transform group-hover:translate-x-1"></i>
+                            </button>
+                        </div>
+
+                        {/* Footer Info */}
+                        <div className="text-xs text-zinc-500 dark:text-zinc-500 flex flex-col sm:flex-row gap-2 items-center">
+                            <span>ᬒᬵ ᬲ᭄ᬯᬲ᭄ᬢ᭄ᬬᬲ᭄ᬢᬸ (Om Swastyastu)</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span>Dikembangkan untuk Pembelajaran Abad 21</span>
+                        </div>
+                    </div>
+                );
+            }
+
+            // --- MAIN NAVIGATION HEADER ---
+            return (
+                <div className="min-h-screen flex flex-col bg-pattern">
+                    {/* Top Bar */}
+                    <header className="sticky top-0 z-40 glass-card border-b border-gold-500/20 px-4 py-3">
+                        <div className="max-w-6xl mx-auto flex items-center justify-between">
+                            {/* Logo */}
+                            <div 
+                                onClick={() => setCurrentTab('beranda')}
+                                className="flex items-center gap-2 cursor-pointer group"
+                            >
+                                <span className="text-2xl group-hover:scale-110 transition-transform">🪷</span>
+                                <div>
+                                    <h1 className="font-cinzel text-xl font-bold leading-none text-brown-800 dark:text-gold-400">DARSANA</h1>
+                                    <span className="text-[10px] text-gold-600 dark:text-gold-500 font-semibold tracking-wider">AGAMA HINDU SMA XI</span>
+                                </div>
+                            </div>
+
+                            {/* Center Gamification Widget */}
+                            <div className="hidden md:flex items-center gap-6 bg-cream-100/80 dark:bg-zinc-900/80 px-4 py-1.5 rounded-full border border-gold-500/20 text-xs font-semibold">
+                                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                                    <i data-lucide="zap" className="w-4 h-4 fill-amber-500"></i>
+                                    <span>{xp} XP</span>
+                                </div>
+                                <div className="h-3 w-px bg-zinc-300 dark:bg-zinc-700"></div>
+                                <div className="flex items-center gap-2">
+                                    <span>Progress:</span>
+                                    <div className="w-24 bg-zinc-200 dark:bg-zinc-700 h-2 rounded-full overflow-hidden">
+                                        <div className="bg-gold-500 h-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
+                                    </div>
+                                    <span className="text-gold-600 dark:text-gold-400">{progressPercentage}%</span>
+                                </div>
+                            </div>
+
+                            {/* Controls */}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={toggleAudio}
+                                    title="Toggle Sound"
+                                    className={`p-2 rounded-xl transition-colors ${isAudioOn ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' : 'text-zinc-500 hover:bg-cream-200 dark:hover:bg-zinc-800'}`}
+                                >
+                                    <i data-lucide={isAudioOn ? "volume-2" : "volume-x"} className="w-5 h-5"></i>
+                                </button>
+
+                                <button
+                                    onClick={toggleDarkMode}
+                                    title="Toggle Dark Mode"
+                                    className="p-2 rounded-xl text-zinc-600 dark:text-zinc-300 hover:bg-cream-200 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                    <i data-lucide={isDark ? "sun" : "moon"} className="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Mobile Gamification Widget Bar */}
+                        <div className="md:hidden mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs px-1">
+                            <span className="font-semibold text-amber-600 dark:text-amber-400">⚡ {xp} XP</span>
+                            <div className="flex items-center gap-2">
+                                <span>Selesai:</span>
+                                <div className="w-20 bg-zinc-200 dark:bg-zinc-700 h-2 rounded-full overflow-hidden">
+                                    <div className="bg-gold-500 h-full" style={{ width: `${progressPercentage}%` }}></div>
+                                </div>
+                                <span className="font-semibold text-gold-600">{progressPercentage}%</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Navigation Tabs Bar */}
+                    <nav className="glass-card border-b border-gold-500/10 sticky top-[57px] z-30 overflow-x-auto no-scrollbar">
+                        <div className="max-w-6xl mx-auto flex items-center gap-1 p-2 min-w-max">
+                            {[
+                                { id: 'beranda', label: 'Beranda', icon: 'home' },
+                                { id: 'materi', label: 'Materi Pembelajaran', icon: 'book-open' },
+                                { id: 'game', label: 'Belajar & Bermain', icon: 'gamepad-2' },
+                                { id: 'video', label: 'Video Pembelajaran', icon: 'video' },
+                                { id: 'aktivitas', label: 'Misi & Aktivitas', icon: 'check-square' },
+                                { id: 'kuis', label: 'Kuis Interaktif', icon: 'help-circle' },
+                                { id: 'evaluasi', label: 'Evaluasi', icon: 'award' },
+                                { id: 'profil', label: 'Profil Aplikasi', icon: 'user' },
+                            ].map((tab) => {
+                                const isActive = currentTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => { sound.playClick(); setCurrentTab(tab.id); }}
+                                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-medium transition-all duration-200 ${
+                                            isActive
+                                                ? 'bg-gradient-to-r from-gold-500 to-amber-600 text-white shadow-md shadow-gold-500/20 font-semibold'
+                                                : 'text-zinc-600 dark:text-zinc-300 hover:bg-cream-200/60 dark:hover:bg-zinc-800/60'
+                                        }`}
+                                    >
+                                        <i data-lucide={tab.icon} className="w-4 h-4"></i>
+                                        <span>{tab.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </nav>
+
+                    {/* MAIN CONTENT AREA */}
+                    <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 my-2">
+                        {/* ================= BERANDA ================= */}
+                        {currentTab === 'beranda' && (
+                            <div className="space-y-6">
+                                {/* Welcome Banner */}
+                                <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-brown-800 via-brown-700 to-amber-900 text-cream-50 p-6 md:p-8 shadow-xl">
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-gold-400/10 rounded-full blur-2xl pointer-events-none"></div>
+                                    <div className="relative z-10 max-w-2xl">
+                                        <span className="inline-block px-3 py-1 rounded-full bg-gold-500/20 border border-gold-400/30 text-gold-300 text-xs font-semibold mb-3">
+                                            Om Swastyastu • Selamat Datang
+                                        </span>
+                                        <h2 className="font-cinzel text-2xl md:text-4xl font-bold mb-3">
+                                            Rahajeng Wanti Warsa Dharma
+                                        </h2>
+                                        <p className="text-cream-200 text-sm md:text-base leading-relaxed mb-6">
+                                            Darsana hadir sebagai ruang belajar digital yang interaktif untuk membantu siswa SMA Kelas XI memahami filosofi, etika, dan ajaran suci Agama Hindu secara menyenangkan dan bermakna.
+                                        </p>
+                                        <div className="flex flex-wrap gap-3">
+                                            <button
+                                                onClick={() => setCurrentTab('materi')}
+                                                className="px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-zinc-950 font-semibold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2"
+                                            >
+                                                <i data-lucide="book-open" className="w-4 h-4"></i>
+                                                <span>Mulai Materi</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setCurrentTab('game')}
+                                                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium text-sm rounded-xl border border-white/20 transition-all flex items-center gap-2 backdrop-blur-md"
+                                            >
+                                                <i data-lucide="gamepad-2" className="w-4 h-4"></i>
+                                                <span>Bermain Mini Game</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Menu Cards Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                                    {[
+                                        { title: 'Materi Pembelajaran', desc: '6 Bab Lengkap dengan contoh kehidupan nyata.', icon: 'book-open', tab: 'materi', color: 'from-amber-500 to-gold-600' },
+                                        { title: 'Belajar sambil Bermain', desc: 'Cocokkan istilah, tebak gambar, dan game seru.', icon: 'gamepad-2', tab: 'game', color: 'from-emerald-500 to-teal-600' },
+                                        { title: 'Video Pembelajaran', desc: 'Video konsep filsafat & budaya Hindu Bali.', icon: 'video', tab: 'video', color: 'from-blue-500 to-indigo-600' },
+                                        { title: 'Misi & Aktivitas', desc: 'Tugas penerapan Dharma di lingkungan sekolah.', icon: 'check-square', tab: 'aktivitas', color: 'from-purple-500 to-pink-600' },
+                                        { title: 'Kuis Interaktif', desc: 'Uji pemahamanmu dengan 10 soal langsung bernilai.', icon: 'help-circle', tab: 'kuis', color: 'from-orange-500 to-amber-600' },
+                                        { title: 'Evaluasi & Profil', desc: 'Ujian akhir dan informasi pengembang aplikasi.', icon: 'award', tab: 'evaluasi', color: 'from-rose-500 to-red-600' }
+                                    ].map((card, idx) => (
+                                        <div
+                                            key={idx}
+                                            onClick={() => { sound.playClick(); setCurrentTab(card.tab); }}
+                                            className="group glass-card p-5 rounded-2xl border border-gold-500/10 hover:border-gold-500/40 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between"
+                                        >
+                                            <div>
+                                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${card.color} text-white flex items-center justify-center mb-4 shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                                                    <i data-lucide={card.icon} className="w-6 h-6"></i>
+                                                </div>
+                                                <h3 className="font-bold text-base md:text-lg mb-1 group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">
+                                                    {card.title}
+                                                </h3>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                                    {card.desc}
+                                                </p>
+                                            </div>
+                                            <div className="mt-4 flex items-center text-xs font-semibold text-gold-600 dark:text-gold-400 group-hover:translate-x-1 transition-transform">
+                                                <span>Buka Fitur</span>
+                                                <i data-lucide="chevron-right" className="w-4 h-4 ml-1"></i>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ================= MATERI PEMBELAJARAN ================= */}
+                        {currentTab === 'materi' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {/* Sidebar Selection */}
+                                <div className="lg:col-span-4 space-y-3">
+                                    <h3 className="font-cinzel text-lg font-bold text-brown-800 dark:text-gold-400 px-1">
+                                        Daftar Materi (Bab)
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {MATERI_LIST.map((mat) => {
+                                            const isDone = completedLessons.includes(mat.id);
+                                            const isSelected = selectedLesson.id === mat.id;
+                                            return (
+                                                <div
+                                                    key={mat.id}
+                                                    onClick={() => { sound.playClick(); setSelectedLesson(mat); }}
+                                                    className={`p-4 rounded-2xl cursor-pointer transition-all border flex items-center justify-between ${
+                                                        isSelected
+                                                            ? 'bg-gradient-to-r from-gold-500/15 to-amber-500/10 border-gold-500 dark:bg-gold-500/20'
+                                                            : 'glass-card border-gold-500/10 hover:border-gold-500/30'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-gold-500 text-white' : 'bg-cream-200 dark:bg-zinc-800 text-gold-600'}`}>
+                                                            <i data-lucide={mat.icon} className="w-5 h-5"></i>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-sm">{mat.title}</h4>
+                                                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{mat.badge}</span>
+                                                        </div>
+                                                    </div>
+                                                    {isDone && (
+                                                        <span className="text-emerald-500 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full flex items-center gap-1 border border-emerald-500/20">
+                                                            ✓ Selesai
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Main Reader Area */}
+                                <div className="lg:col-span-8">
+                                    <div className="glass-card p-6 md:p-8 rounded-3xl border border-gold-500/20 shadow-lg space-y-6">
+                                        {/* Header */}
+                                        <div className="border-b border-zinc-200 dark:border-zinc-800 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                            <div>
+                                                <span className="text-xs font-bold text-gold-600 dark:text-gold-400 uppercase tracking-widest bg-gold-500/10 px-3 py-1 rounded-full">
+                                                    {selectedLesson.badge}
+                                                </span>
+                                                <h2 className="font-cinzel text-2xl md:text-3xl font-bold mt-2 text-brown-800 dark:text-gold-300">
+                                                    {selectedLesson.title}
+                                                </h2>
+                                                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                                    {selectedLesson.subtitle}
+                                                </p>
+                                            </div>
+                                            <div className="text-4xl p-3 bg-cream-100 dark:bg-zinc-900 rounded-2xl flex items-center justify-center self-start">
+                                                {selectedLesson.illustration}
+                                            </div>
+                                        </div>
+
+                                        {/* Pengertian */}
+                                        <div className="space-y-2">
+                                            <h4 className="font-bold text-sm text-gold-700 dark:text-gold-400 uppercase tracking-wider flex items-center gap-2">
+                                                <i data-lucide="info" className="w-4 h-4"></i> Pengertian
+                                            </h4>
+                                            <p className="text-sm md:text-base leading-relaxed text-zinc-700 dark:text-zinc-300 bg-cream-100/60 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
+                                                {selectedLesson.definition}
+                                            </p>
+                                        </div>
+
+                                        {/* Penjelasan Detailed */}
+                                        <div className="space-y-3">
+                                            <h4 className="font-bold text-sm text-gold-700 dark:text-gold-400 uppercase tracking-wider flex items-center gap-2">
+                                                <i data-lucide="book-open" className="w-4 h-4"></i> Penjelasan Rinci
+                                            </h4>
+                                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                                {selectedLesson.explanation}
+                                            </p>
+                                            <div className="grid grid-cols-1 gap-2.5 pt-2">
+                                                {selectedLesson.points.map((pt, i) => (
+                                                    <div key={i} className="p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+                                                        <h5 className="font-bold text-sm text-brown-800 dark:text-gold-300 mb-1">{pt.title}</h5>
+                                                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">{pt.desc}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Contoh Nyata */}
+                                        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 to-gold-500/10 border border-gold-500/30 space-y-1">
+                                            <h4 className="font-bold text-xs uppercase text-gold-700 dark:text-gold-400 flex items-center gap-1.5">
+                                                💡 Contoh Dalam Kehidupan Siswa SMA:
+                                            </h4>
+                                            <p className="text-sm italic text-zinc-700 dark:text-zinc-300">
+                                                "{selectedLesson.example}"
+                                            </p>
+                                        </div>
+
+                                        {/* Action Bar */}
+                                        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+                                            <button
+                                                onClick={() => markLessonComplete(selectedLesson.id)}
+                                                className={`px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all ${
+                                                    completedLessons.includes(selectedLesson.id)
+                                                        ? 'bg-emerald-500 text-white shadow-md'
+                                                        : 'bg-gold-500 hover:bg-gold-600 text-zinc-950 shadow-md'
+                                                }`}
+                                            >
+                                                <i data-lucide="check-circle" className="w-4 h-4"></i>
+                                                <span>{completedLessons.includes(selectedLesson.id) ? 'Sudah Dipelajari (+50 XP)' : 'Tandai Selesai Dipelajari'}</span>
+                                            </button>
+
+                                            {/* Next lesson button */}
+                                            {MATERI_LIST.findIndex(m => m.id === selectedLesson.id) < MATERI_LIST.length - 1 && (
+                                                <button
+                                                    onClick={() => {
+                                                        const idx = MATERI_LIST.findIndex(m => m.id === selectedLesson.id);
+                                                        setSelectedLesson(MATERI_LIST[idx + 1]);
+                                                        sound.playClick();
+                                                    }}
+                                                    className="px-4 py-2.5 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 text-xs md:text-sm font-semibold rounded-xl flex items-center gap-2"
+                                                >
+                                                    <span>Materi Berikutnya</span>
+                                                    <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ================= BELAJAR & BERMAIN (GAMES) ================= */}
+                        {currentTab === 'game' && (
+                            <div className="space-y-8">
+                                <div className="text-center max-w-2xl mx-auto space-y-2">
+                                    <h2 className="font-cinzel text-2xl md:text-3xl font-bold text-brown-800 dark:text-gold-300">
+                                        Belajar Sambil Bermain
+                                    </h2>
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                        Asah pemahaman ajaran Dharma melalui aktivitas interaktif menyenangkan!
+                                    </p>
+                                </div>
+
+                                {/* GAME 1: Cocokkan Istilah */}
+                                <div className="glass-card p-6 rounded-3xl border border-gold-500/20 shadow-md space-y-4">
+                                    <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                                        <h3 className="font-bold text-base md:text-lg flex items-center gap-2">
+                                            🎮 Mini Game 1: Cocokkan Istilah & Pengertian
+                                        </h3>
+                                        <span className="text-xs bg-gold-500/20 text-gold-600 dark:text-gold-400 px-3 py-1 rounded-full font-semibold">
+                                            +20 XP Tiap Pasangan
+                                        </span>
+                                    </div>
+
+                                    <p className="text-xs text-zinc-500">Klik istilah di sebelah kiri, lalu klik pengertian yang cocok di sebelah kanan!</p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                        {/* Istilah Column */}
+                                        <div className="space-y-2.5">
+                                            <h4 className="text-xs font-bold uppercase text-zinc-400">Pilih Istilah:</h4>
+                                            {MATCH_ITEMS.map((item) => {
+                                                const isMatched = matchedPairs[item.id];
+                                                const isSelected = selectedTerm?.id === item.id;
+                                                return (
+                                                    <button
+                                                        key={item.id}
+                                                        disabled={isMatched}
+                                                        onClick={() => handleTermClick(item)}
+                                                        className={`w-full text-left p-3.5 rounded-xl border text-sm font-semibold transition-all ${
+                                                            isMatched
+                                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 opacity-60'
+                                                                : isSelected
+                                                                ? 'bg-gold-500 text-white border-gold-600 scale-[1.02]'
+                                                                : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-gold-500'
+                                                        }`}
+                                                    >
+                                                        {item.term} {isMatched && '✓'}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Pengertian Column */}
+                                        <div className="space-y-2.5">
+                                            <h4 className="text-xs font-bold uppercase text-zinc-400">Pilih Pengertian:</h4>
+                                            {[...MATCH_ITEMS].sort(() => 0.5 - Math.random()).map((item) => {
+                                                const isMatched = matchedPairs[item.id];
+                                                return (
+                                                    <button
+                                                        key={item.id}
+                                                        disabled={isMatched}
+                                                        onClick={() => handleDefClick(item)}
+                                                        className={`w-full text-left p-3.5 rounded-xl border text-xs md:text-sm transition-all ${
+                                                            isMatched
+                                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 opacity-60'
+                                                                : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-gold-500'
+                                                        }`}
+                                                    >
+                                                        {item.def}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* GAME 2: Benar atau Salah Fast Quiz */}
+                                <div className="glass-card p-6 rounded-3xl border border-gold-500/20 shadow-md space-y-4">
+                                    <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                                        <h3 className="font-bold text-base md:text-lg flex items-center gap-2">
+                                            ⚡ Mini Game 2: Tantangan Benar atau Salah
+                                        </h3>
+                                        <span className="text-xs font-semibold text-zinc-500">Soal {tfIndex + 1} / {TRUE_FALSE_ITEMS.length}</span>
+                                    </div>
+
+                                    {!tfFinished ? (
+                                        <div className="space-y-6 py-4 text-center">
+                                            <p className="text-lg md:text-xl font-medium text-brown-800 dark:text-gold-300">
+                                                "{TRUE_FALSE_ITEMS[tfIndex].text}"
+                                            </p>
+
+                                            <div className="flex justify-center gap-4 max-w-xs mx-auto">
+                                                <button
+                                                    onClick={() => handleTFAnswer(true)}
+                                                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-md transition-transform active:scale-95"
+                                                >
+                                                    BENAR (BENAR)
+                                                </button>
+                                                <button
+                                                    onClick={() => handleTFAnswer(false)}
+                                                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl shadow-md transition-transform active:scale-95"
+                                                >
+                                                    SALAH
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6 space-y-3">
+                                            <div className="text-3xl">🎉</div>
+                                            <h4 className="font-bold text-lg">Tantangan Selesai!</h4>
+                                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                                Skor Kamu: <span className="font-bold text-gold-600">{tfScore}</span> dari {TRUE_FALSE_ITEMS.length} benar!
+                                            </p>
+                                            <button
+                                                onClick={() => { setTfIndex(0); setTfScore(0); setTfFinished(false); }}
+                                                className="px-4 py-2 bg-gold-500 text-zinc-950 font-semibold text-xs rounded-xl shadow"
+                                            >
+                                                Main Lagi
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ================= VIDEO PEMBELAJARAN ================= */}
+                        {currentTab === 'video' && (
+                            <div className="space-y-6">
+                                <div className="text-center max-w-2xl mx-auto space-y-2">
+                                    <h2 className="font-cinzel text-2xl md:text-3xl font-bold text-brown-800 dark:text-gold-300">
+                                        Video Pembelajaran Interaktif
+                                    </h2>
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                        Saksikan konten multimedia visual untuk memperdalam wawasan ajaran Dharma dan budaya Bali.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {VIDEO_LIST.map((vid) => (
+                                        <div key={vid.id} className="glass-card rounded-2xl border border-gold-500/10 overflow-hidden shadow-md flex flex-col justify-between">
+                                            {/* Video Thumbnail Placeholder */}
+                                            <div className="relative h-48 bg-gradient-to-br from-brown-800 to-amber-950 flex items-center justify-center text-white group cursor-pointer">
+                                                <div className="w-14 h-14 rounded-full bg-gold-500/90 text-zinc-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                    <i data-lucide="play" className="w-6 h-6 fill-current ml-1"></i>
+                                                </div>
+                                                <span className="absolute bottom-3 right-3 bg-black/70 px-2 py-0.5 rounded text-[11px] font-mono">
+                                                    {vid.duration}
+                                                </span>
+                                                <span className="absolute top-3 left-3 bg-gold-500 text-zinc-950 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                                                    {vid.category}
+                                                </span>
+                                            </div>
+                                            <div className="p-5 space-y-2">
+                                                <h3 className="font-bold text-base text-brown-800 dark:text-gold-300">
+                                                    {vid.title}
+                                                </h3>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                                    {vid.desc}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ================= MISI & AKTIVITAS ================= */}
+                        {currentTab === 'aktivitas' && (
+                            <div className="space-y-6">
+                                <div className="text-center max-w-2xl mx-auto space-y-2">
+                                    <h2 className="font-cinzel text-2xl md:text-3xl font-bold text-brown-800 dark:text-gold-300">
+                                        Aktivitas & Misi Penerapan Dharma
+                                    </h2>
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                        Terapkan ajaran nilai kebaikan dalam kehidupan nyata harianmu di lingkungan sekolah dan rumah!
+                                    </p>
+                                </div>
+
+                                <div className="glass-card p-6 rounded-3xl border border-gold-500/20 shadow-md space-y-4">
+                                    <h3 className="font-bold text-base md:text-lg flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                                        <i data-lucide="target" className="w-5 h-5 text-gold-500"></i> Check-List Misi Harian Siswa
+                                    </h3>
+
+                                    <div className="space-y-3">
+                                        {missions.map((m) => (
+                                            <div
+                                                key={m.id}
+                                                onClick={() => {
+                                                    const updated = missions.map(item => item.id === m.id ? { ...item, done: !item.done } : item);
+                                                    setMissions(updated);
+                                                    if (!m.done) {
+                                                        addXP(25);
+                                                        sound.playCorrect();
+                                                    }
+                                                }}
+                                                className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${
+                                                    m.done
+                                                        ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-500/30 line-through text-zinc-500'
+                                                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-gold-500'
+                                                }`}
+                                            >
+                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center border text-xs font-bold ${
+                                                    m.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-zinc-400'
+                                                }`}>
+                                                    {m.done && '✓'}
+                                                </div>
+                                                <p className="text-xs md:text-sm font-medium flex-1">
+                                                    {m.text}
+                                                </p>
+                                                <span className="text-[11px] text-amber-600 font-semibold bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md">
+                                                    +25 XP
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ================= KUIS INTERAKTIF ================= */}
+                        {currentTab === 'kuis' && (
+                            <div className="space-y-6">
+                                <div className="text-center max-w-2xl mx-auto space-y-2">
+                                    <h2 className="font-cinzel text-2xl md:text-3xl font-bold text-brown-800 dark:text-gold-300">
+                                        Kuis Interaktif Agama Hindu
+                                    </h2>
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                        Uji pemahaman materi dengan 10 soal pilihan ganda di bawah ini.
+                                    </p>
+                                </div>
+
+                                {!quizSubmitted ? (
+                                    <div className="space-y-6">
+                                        {QUIZ_QUESTIONS.map((q, idx) => (
+                                            <div key={q.id} className="glass-card p-6 rounded-2xl border border-gold-500/15 shadow-sm space-y-4">
+                                                <div className="flex items-start gap-3">
+                                                    <span className="w-7 h-7 rounded-lg bg-gold-500/20 text-gold-700 dark:text-gold-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                                        {idx + 1}
+                                                    </span>
+                                                    <p className="font-semibold text-sm md:text-base text-brown-800 dark:text-cream-100">
+                                                        {q.question}
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 pl-10">
+                                                    {q.options.map((opt, optIdx) => {
+                                                        const isSelected = quizAnswers[q.id] === optIdx;
+                                                        return (
+                                                            <button
+                                                                key={optIdx}
+                                                                onClick={() => {
+                                                                    sound.playClick();
+                                                                    setQuizAnswers({ ...quizAnswers, [q.id]: optIdx });
+                                                                }}
+                                                                className={`p-3 rounded-xl text-left text-xs md:text-sm transition-all border ${
+                                                                    isSelected
+                                                                        ? 'bg-gold-500 text-zinc-950 border-gold-600 font-bold shadow-sm'
+                                                                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-gold-400'
+                                                                }`}
+                                                            >
+                                                                <span className="font-mono text-zinc-400 mr-2">{String.fromCharCode(65 + optIdx)}.</span>
+                                                                {opt}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <div className="text-center pt-4">
+                                            <button
+                                                onClick={handleQuizSubmit}
+                                                disabled={Object.keys(quizAnswers).length < QUIZ_QUESTIONS.length}
+                                                className={`px-8 py-3.5 rounded-2xl font-bold text-sm shadow-xl transition-all ${
+                                                    Object.keys(quizAnswers).length === QUIZ_QUESTIONS.length
+                                                        ? 'bg-gradient-to-r from-gold-500 to-amber-600 text-white hover:scale-105'
+                                                        : 'bg-zinc-300 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                Kirim & Lihat Hasil Skor Kuis
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* RESULT SCORE CARD */
+                                    <div className="glass-card p-8 rounded-3xl border border-gold-500/30 text-center space-y-6 max-w-xl mx-auto shadow-xl">
+                                        <div className="w-20 h-20 mx-auto rounded-full bg-gold-500/20 text-gold-600 flex items-center justify-center text-4xl">
+                                            🏆
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h3 className="text-xs uppercase font-bold text-zinc-400 tracking-widest">Hasil Kuis Kamu</h3>
+                                            <div className="text-5xl font-black text-brown-800 dark:text-gold-300">
+                                                {quizScore} <span className="text-xl text-zinc-400 font-normal">/ 100</span>
+                                            </div>
+                                            <div className="pt-2">
+                                                <span className={`inline-block px-4 py-1.5 rounded-full text-xs font-bold ${getQuizCategory(quizScore).color}`}>
+                                                    Kategori: {getQuizCategory(quizScore).label}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 bg-cream-100/80 dark:bg-zinc-900/80 rounded-2xl text-xs space-y-1 text-zinc-600 dark:text-zinc-400">
+                                            <p>Jawaban Benar: <strong className="text-emerald-600">{quizScore / 10}</strong> / 10 Soal</p>
+                                            <p>Jawaban Salah: <strong className="text-rose-600">{10 - (quizScore / 10)}</strong> / 10 Soal</p>
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                setQuizAnswers({});
+                                                setQuizSubmitted(false);
+                                                sound.playClick();
+                                            }}
+                                            className="px-6 py-3 bg-gold-500 hover:bg-gold-600 text-zinc-950 font-bold text-sm rounded-xl shadow-md transition-all"
+                                        >
+                                            Ulangi Kuis
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ================= EVALUASI ================= */}
+                        {currentTab === 'evaluasi' && (
+                            <div className="glass-card p-6 md:p-8 rounded-3xl border border-gold-500/20 shadow-md space-y-6 max-w-3xl mx-auto">
+                                <div className="border-b border-zinc-200 dark:border-zinc-800 pb-4">
+                                    <h2 className="font-cinzel text-2xl font-bold text-brown-800 dark:text-gold-300">
+                                        Evaluasi Refleksi Pembelajaran
+                                    </h2>
+                                    <p className="text-xs text-zinc-500">
+                                        Refleksikan pemahaman dirimu setelah mempelajari seluruh bab pada media Darsana.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-zinc-500">1. Apa pemahaman paling berkesan yang kamu dapatkan tentang ajaran Tri Hita Karana?</label>
+                                        <textarea
+                                            rows="3"
+                                            placeholder="Tuliskan pendapat atau intisari pemikiranmu di sini..."
+                                            className="w-full p-3 text-xs md:text-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:border-gold-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-zinc-500">2. Sebutkan satu tantangan terbesar dalam menjaga Vacika Parisudha (perkataan jujur/santun) di media sosial saat ini!</label>
+                                        <textarea
+                                            rows="3"
+                                            placeholder="Tuliskan analisis opinimu..."
+                                            className="w-full p-3 text-xs md:text-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:border-gold-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <button
+                                        onClick={() => {
+                                            sound.playCorrect();
+                                            confetti({ particleCount: 60, spread: 50 });
+                                            alert("Terima kasih! Jawaban evaluasi refleksi berhasil tersimpan.");
+                                        }}
+                                        className="w-full py-3 bg-gold-500 hover:bg-gold-600 text-zinc-950 font-bold text-sm rounded-xl shadow-md transition-all"
+                                    >
+                                        Kirim Evaluasi Diri
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ================= PROFIL APLIKASI ================= */}
+                        {currentTab === 'profil' && (
+                            <div className="glass-card p-6 md:p-8 rounded-3xl border border-gold-500/20 shadow-lg max-w-2xl mx-auto space-y-6">
+                                <div className="text-center space-y-2 border-b border-zinc-200 dark:border-zinc-800 pb-6">
+                                    <div className="w-16 h-16 mx-auto rounded-full bg-gold-500/20 text-gold-600 flex items-center justify-center text-3xl">
+                                        🪷
+                                    </div>
+                                    <h2 className="font-cinzel text-2xl font-bold text-brown-800 dark:text-gold-300">
+                                        DARSANA
+                                    </h2>
+                                    <p className="text-xs text-gold-600 dark:text-gold-400 font-semibold tracking-wider">
+                                        MEDIA PEMBELAJARAN INTERAKTIF AGAMA HINDU
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                    <div className="p-3.5 bg-cream-100/60 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/60 dark:border-zinc-800 space-y-1">
+                                        <span className="text-zinc-400 font-bold uppercase text-[10px]">Mata Pelajaran:</span>
+                                        <p className="font-semibold text-sm">Pendidikan Agama Hindu & Budi Pekerti</p>
+                                    </div>
+                                    <div className="p-3.5 bg-cream-100/60 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/60 dark:border-zinc-800 space-y-1">
+                                        <span className="text-zinc-400 font-bold uppercase text-[10px]">Sasaran Pengguna:</span>
+                                        <p className="font-semibold text-sm">Siswa SMA / SMK Kelas XI</p>
+                                    </div>
+                                    <div className="p-3.5 bg-cream-100/60 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/60 dark:border-zinc-800 space-y-1">
+                                        <span className="text-zinc-400 font-bold uppercase text-[10px]">Kurikulum:</span>
+                                        <p className="font-semibold text-sm">Kurikulum Merdeka (Capaian Pembelajaran Phase F)</p>
+                                    </div>
+                                    <div className="p-3.5 bg-cream-100/60 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/60 dark:border-zinc-800 space-y-1">
+                                        <span className="text-zinc-400 font-bold uppercase text-[10px]">Konsep Desain:</span>
+                                        <p className="font-semibold text-sm">Modern Balinese Hindu Aesthetic</p>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 bg-amber-500/10 rounded-2xl border border-gold-500/20 text-xs space-y-2">
+                                    <h4 className="font-bold text-brown-800 dark:text-gold-300">🎯 Tujuan Pembuatan:</h4>
+                                    <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                        Menyediakan media pembelajaran mandiri yang interaktif, menyenangkan, dan relevan bagi generasi muda Hindu dalam mempelajari nilai-nilai kebenaran Dharma di era digital.
+                                    </p>
+                                </div>
+
+                                <div className="text-center text-xs text-zinc-400 pt-2">
+                                    <p>© 2026 Darsana. Om Shanti Shanti Shanti Om.</p>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
